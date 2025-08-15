@@ -1,0 +1,44 @@
+seed: 42
+
+data:
+  active: ucr          # ← 这里切换要训练的数据集
+  common: &data_common       # 所有数据集共享的 DataLoader 级别参数
+    batch_size: 64
+    num_workers: 4
+    # drop_last: true
+    # pin_memory: true
+
+  datasets:
+    ucr:
+      <<: *data_common
+      path: data/ucr.npy
+
+model:
+  kwargs:
+    in_channels: 5
+    channels: [64, 128, 256]
+    out_channels: 128
+    kernel_size: 3
+
+
+
+loss:
+  kwargs:
+    mode: Subseries
+    negative_penalty: 1.0
+    compared_length: null
+    nb_random_samples: 16
+
+optim:
+  name: Adam
+  kwargs:
+    lr: 0.001
+    weight_decay: 0.0
+  grad_clip: 5.0
+  scheduler: null
+  scheduler_kwargs: {}
+
+trainer:
+  epochs: 100
+  save_dir: runs/exp
+  save_epoch: 20
