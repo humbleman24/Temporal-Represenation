@@ -159,6 +159,7 @@ experiments/
 checkpoints/
 tensorboard/
 wandb/
+data/
 
 # IDE and editor files
 .vscode/

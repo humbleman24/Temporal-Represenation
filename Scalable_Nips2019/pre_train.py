@@ -162,7 +162,7 @@ def main():
     
     # Get dataset based on args and config
     dataset = get_dataset(
-        dataset_name="mock",
+        dataset_name=dataset_name,
         data_path=data_path,
     )
     dataloader = DataLoader(dataset, **config["data"]["common"])

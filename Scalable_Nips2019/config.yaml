@@ -11,11 +11,11 @@ data:
   datasets:
     ucr:
       <<: *data_common
-      path: data/ucr.npy
+      path: /root/info/Representation_Learning/data/UCRArchive_2018/Coffee
 
 model:
   kwargs:
-    in_channels: 5
+    in_channels: 1
     channels: [64, 128, 256]
     out_channels: 128
     kernel_size: 3

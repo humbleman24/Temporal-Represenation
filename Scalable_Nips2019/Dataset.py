@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import pandas as pd
+import math
 import torch
 from torch.utils.data import Dataset
 
@@ -41,6 +43,35 @@ def load_mock_data(n=1024, c=5, l=256, seed=0):
     return torch.from_numpy(np.stack(data, axis=0)).float()  # (N,C,L)
 
 
+def load_ucr_data(data_path):
+    sub_data = data_path.split('/')[-1]
+    train_file = os.path.join(data_path, sub_data + "_TRAIN.tsv")
+    test_file = os.path.join(data_path, sub_data + "_TEST.tsv")
+    train_df = pd.read_csv(train_file, sep='\t', header=None)
+    test_df = pd.read_csv(test_file, sep='\t', header=None)
+    train_array = np.array(train_df)
+    test_array = np.array(test_df)
+
+    # Move the labels to {0, ..., L-1}
+    labels = np.unique(train_array[:, 0])   # get all class labels
+    transform = {}                          # organize dataset based on labels
+    for i, l in enumerate(labels):
+        transform[l] = i
+
+    train = np.expand_dims(train_array[:, 1:], 1).astype(np.float32)
+    train_labels = np.vectorize(transform.get)(train_array[:, 0])
+    test = np.expand_dims(test_array[:, 1:], 1).astype(np.float32)
+    test_labels = np.vectorize(transform.get)(test_array[:, 0])
+
+    mean = np.nanmean(np.concatenate([train, test]))
+    var = np.nanvar(np.concatenate([train, test]))
+    train = (train - mean) / math.sqrt(var)
+    test = (test - mean) / math.sqrt(var)
+    return train, train_labels, test, test_labels
+
+
+
+
 def get_dataset(dataset_name, data_path=None):
     """
     Get dataset based on dataset name and path
@@ -60,11 +91,8 @@ def get_dataset(dataset_name, data_path=None):
     
     elif dataset_name == "ucr":
         # Load UCR dataset
-        if data_path and os.path.isfile(data_path):
-            arr = np.load(data_path)
-            assert arr.ndim == 3, f"UCR data must be (N, C, L), got shape {arr.shape}"
-            data = torch.from_numpy(arr).float()
-            return TimeSeriesDataset(data)
+        data, train_label, test, test_label = load_ucr_data(data_path)
+        return TimeSeriesDataset(data)
 
     
     else:
