@@ -141,7 +141,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="config.yaml")
     parser.add_argument("--encoder", type=str, default="TCN")
-    parser.add_argument("--dataset", type=str, default="ucr")
+    parser.add_argument("--dataset", type=str, default="finance")
     args = parser.parse_args()
 
     with open(args.config, "r") as f:

@@ -11,11 +11,15 @@ data:
   datasets:
     ucr:
       <<: *data_common
-      path: /root/info/Representation_Learning/data/UCRArchive_2018/Coffee
+      path: /root/info/Representation_Learning/data/UCRArchive_2018
+    finance:
+      <<: *data_common
+      path: /root/info/Representation_Learning/data/self_finance/csi.npy
+
 
 model:
   kwargs:
-    in_channels: 1
+    in_channels: 13
     channels: [64, 128, 256]
     out_channels: 128
     kernel_size: 3
@@ -32,13 +36,13 @@ loss:
 optim:
   name: Adam
   kwargs:
-    lr: 0.001
+    lr: 0.0005
     weight_decay: 0.0
   grad_clip: 5.0
   scheduler: null
   scheduler_kwargs: {}
 
 trainer:
-  epochs: 100
+  epochs: 500
   save_dir: runs/exp
   save_epoch: 20

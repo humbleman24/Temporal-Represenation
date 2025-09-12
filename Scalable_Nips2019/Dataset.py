@@ -3,25 +3,37 @@ import numpy as np
 import pandas as pd
 import math
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset
-
 
 class TimeSeriesDataset(Dataset):
     """Time series dataset for unsupervised representation learning"""
     
-    def __init__(self, data):
+    def __init__(self, data, transform=None, to_tensor=True):
         """
         Args:
-            data: torch.Tensor of shape (N, C, L) where N is number of samples,
+            data: numpy array or torch.Tensor of shape (N, C, L) where N is number of samples,
                   C is number of channels, L is sequence length
+            transform: Optional transform to be applied on a sample
+            to_tensor: Whether to convert data to tensor automatically
         """
-        self.data = data
+        if to_tensor and not isinstance(data, torch.Tensor):
+            self.data = torch.from_numpy(data).float()
+        else:
+            self.data = data
+            
+        self.transform = transform
     
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
-        return self.data[idx]
+        sample = self.data[idx]
+        
+        if self.transform:
+            sample = self.transform(sample)
+            
+        return sample
 
 
 def load_mock_data(n=1024, c=5, l=256, seed=0):
@@ -41,7 +53,6 @@ def load_mock_data(n=1024, c=5, l=256, seed=0):
         x += 0.1 * rng.standard_normal(size=(c, l)).astype(np.float32)
         data.append(x)
     return torch.from_numpy(np.stack(data, axis=0)).float()  # (N,C,L)
-
 
 def load_ucr_data(data_path):
     sub_data = data_path.split('/')[-1]
@@ -69,31 +80,65 @@ def load_ucr_data(data_path):
     test = (test - mean) / math.sqrt(var)
     return train, train_labels, test, test_labels
 
+def load_finance_data(data_path, normalize=True):
+    """
+    Load finance data and convert from (N, T, C) to (N, C, T) format
+    
+    Args:
+        data_path: Path to the saved numpy file containing finance data
+        normalize: Whether to normalize the data
+        
+    Returns:
+        numpy.ndarray of shape (N, C, T)
+    """
+    # Load data (expected shape: N, T, C)
+    data = np.load(data_path).astype(np.float32)
+    print(f"Original data shape: {data.shape}")
+    
+    # Transpose from (N, T, C) to (N, C, T)
+    data_transposed = np.transpose(data, (0, 2, 1))
+    print(f"Transposed data shape: {data_transposed.shape}")
+    
+    if normalize:
+        # Normalize the data
+        mean = np.nanmean(data_transposed)
+        var = np.nanvar(data_transposed) 
+        data_transposed = (data_transposed - mean) / np.sqrt(var)
+    
+    return data_transposed
 
 
-
-def get_dataset(dataset_name, data_path=None):
+def get_dataset(dataset_name, data_path=None, transform=None, to_tensor=True, **kwargs):
     """
     Get dataset based on dataset name and path
     
     Args:
-        dataset_name: Name of the dataset (e.g., 'ucr', 'mock')
+        dataset_name: Name of the dataset (e.g., 'ucr', 'mock', 'finance')
         data_path: Path to the dataset file
+        transform: Optional transform to be applied on samples
+        to_tensor: Whether to convert data to tensor automatically
         **kwargs: Additional arguments for dataset creation
     
     Returns:
         TimeSeriesDataset instance
     """
     if dataset_name == "mock":
-        # Use mock data for testing
-        data = load_mock_data()
-        return TimeSeriesDataset(data)
+        # Use mock data for testing - already returns tensor
+        data = load_mock_data(**kwargs)
+        # Convert back to numpy if we want to handle tensor conversion in dataset
+        if not to_tensor:
+            data = data.numpy()
+        return TimeSeriesDataset(data, transform=transform, to_tensor=to_tensor)
     
     elif dataset_name == "ucr":
         # Load UCR dataset
         data, train_label, test, test_label = load_ucr_data(data_path)
-        return TimeSeriesDataset(data)
+        return TimeSeriesDataset(data, transform=transform, to_tensor=to_tensor)
 
-    
+    elif dataset_name == 'finance':
+        # Load finance dataset
+        data = load_finance_data(data_path)
+        return TimeSeriesDataset(data, transform=transform, to_tensor=to_tensor)
+
     else:
         raise ValueError(f"Unsupported dataset: {dataset_name}")
